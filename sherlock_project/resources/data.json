@@ -2853,6 +2853,18 @@
     "urlProbe": "https://www.dailykos.com/signup/check_nickname?nickname={}",
     "username_claimed": "blue"
   },
+  "DanishDatingNet": {
+    "errorType": "status_code",
+    "url": "https://danishdatingnet.com/{}",
+    "urlMain": "https://danishdatingnet.com/",
+    "username_claimed": "buckdane"
+  },
+  "DenmarkPassions": {
+    "errorType": "status_code",
+    "url": "https://denmarkpassions.com/dating/{}/",
+    "urlMain": "https://denmarkpassions.com/",
+    "username_claimed": "jenshansen"
+  },
   "datingRU": {
     "errorType": "status_code",
     "url": "http://dating.ru/{}",
