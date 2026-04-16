@@ -1,34 +1,22 @@
 #!/bin/sh
-# Gradle wrapper script for Unix
-GRADLE_OPTS="${GRADLE_OPTS:-"-Xdock:name=$APP_NAME" "-Xdock:icon=$APP_HOME/media/gradle.icns"}"
 APP_NAME="Gradle"
 APP_BASE_NAME=$(basename "$0")
 APP_HOME=$(cd "$(dirname "$0")" && pwd -P)
-MAX_FD="maximum"
+
 warn() { echo "$*"; }
 die() { echo; echo "$*"; echo; exit 1; }
 
-# OS specific support
-cygwin=false; msys=false; darwin=false; nonstop=false
-case "$(uname)" in
-  CYGWIN* ) cygwin=true ;;
-  Darwin* ) darwin=true ;;
-  MINGW* ) msys=true ;;
-  NONSTOP* ) nonstop=true ;;
-esac
-
 CLASSPATH=$APP_HOME/gradle/wrapper/gradle-wrapper.jar
 
-# Find Java
 if [ -n "$JAVA_HOME" ]; then
   JAVACMD="$JAVA_HOME/bin/java"
-  if [ ! -x "$JAVACMD" ]; then die "ERROR: JAVA_HOME is set but does not point to a valid Java installation."; fi
+  if [ ! -x "$JAVACMD" ]; then die "ERROR: JAVA_HOME not valid."; fi
 else
   JAVACMD="java"
-  which java > /dev/null 2>&1 || die "ERROR: JAVA_HOME is not set and no 'java' command could be found in your PATH."
+  which java > /dev/null 2>&1 || die "ERROR: No java found."
 fi
 
-exec "$JAVACMD" $DEFAULT_JVM_OPTS $JAVA_OPTS $GRADLE_OPTS \
+exec "$JAVACMD" $DEFAULT_JVM_OPTS $JAVA_OPTS \
   "-Dorg.gradle.appname=$APP_BASE_NAME" \
   -classpath "$CLASSPATH" \
   org.gradle.wrapper.GradleWrapperMain \
