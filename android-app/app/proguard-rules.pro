@@ -1,0 +1,4 @@
+-keep class com.sherlock.android.model.** { *; }
+-keep class com.google.gson.** { *; }
+-dontwarn okhttp3.**
+-dontwarn okio.**

@@ -19,6 +19,9 @@ __pycache__/
 # Pip
 src/
 
+# Android app source (override src/ exclusion)
+!android-app/app/src/
+
 # Devel, Build, and Installation
 *.egg-info/
 dist/**
