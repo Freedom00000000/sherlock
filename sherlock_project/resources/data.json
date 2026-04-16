@@ -2865,6 +2865,13 @@
     "urlMain": "https://denmarkpassions.com/",
     "username_claimed": "jenshansen"
   },
+  "Nydate": {
+    "errorMsg": "og kom i kontakt med vores brugere nu",
+    "errorType": "message",
+    "url": "https://www.nydate.dk/account/register/{}",
+    "urlMain": "https://www.nydate.dk/",
+    "username_claimed": "KKA2"
+  },
   "datingRU": {
     "errorType": "status_code",
     "url": "http://dating.ru/{}",
