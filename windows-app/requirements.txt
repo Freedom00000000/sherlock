@@ -1,0 +1,12 @@
+# Sherlock Windows GUI – Python dependencies
+# Install with: pip install -r requirements.txt
+
+# Core Sherlock dependencies
+requests>=2.31.0
+requests-futures>=1.0.1
+colorama>=0.4.6
+pandas>=2.0.0
+tomli>=2.0.1
+
+# Packaging to .exe (optional – only needed to build Sherlock.exe)
+pyinstaller>=6.0.0

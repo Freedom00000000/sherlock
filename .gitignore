@@ -22,6 +22,10 @@ src/
 # Android app source (override src/ exclusion)
 !android-app/app/src/
 
+# Flutter mobile app (override lib/ and src/ exclusions)
+!mobile-app/lib/
+!mobile-app/android/app/src/
+
 # Devel, Build, and Installation
 *.egg-info/
 dist/**
