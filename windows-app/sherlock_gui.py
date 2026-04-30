@@ -2,7 +2,6 @@
 """Sherlock Windows GUI — Username search across social networks."""
 
 import sys
-import os
 import threading
 import queue
 import webbrowser
@@ -64,14 +63,17 @@ FONT_MONO = ("Consolas", 9)
 
 # ── Custom notifier: feeds results into a thread-safe queue ───────────────────
 class _GUINotify(QueryNotify):
-    def __init__(self, q: queue.Queue):
+    def __init__(self, q: queue.Queue, stop_evt: threading.Event):
         super().__init__()
         self._q = q
+        self._stop_evt = stop_evt
 
     def start(self, message=None):
         pass
 
     def update(self, result):
+        if self._stop_evt.is_set():
+            raise InterruptedError("Search stopped by user")
         self._q.put(("result", result))
 
     def finish(self):
@@ -319,13 +321,15 @@ class SherlockApp(tk.Tk):
             self._total = len(site_data)
             self._q.put(("total", self._total))
 
-            notify = _GUINotify(self._q)
+            notify = _GUINotify(self._q, self._stop_evt)
             sherlock(
                 username=username,
                 site_data=site_data,
                 query_notify=notify,
                 timeout=timeout,
             )
+        except InterruptedError:
+            pass
         except Exception as exc:
             self._q.put(("error", str(exc)))
         finally:
