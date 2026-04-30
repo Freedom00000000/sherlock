@@ -2395,6 +2395,13 @@
     "errorType": "status_code",
     "username_claimed": "blue"
   },
+  "Tinder": {
+    "errorMsg": "<title>Tinder | Dating, Make Friends",
+    "errorType": "message",
+    "url": "https://tinder.com/@{}",
+    "urlMain": "https://tinder.com/",
+    "username_claimed": "test"
+  },
   "Topcoder": {
     "errorType": "status_code",
     "url": "https://profiles.topcoder.com/{}/",
