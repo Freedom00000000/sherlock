@@ -1,16 +1,19 @@
 import os
 import re
+import shlex
 import subprocess
 import sys
 
 class Interactives:
     def run_cli(args:str = "") -> str:
         """Pass arguments to Sherlock as a normal user on the command line"""
-        command:str = f"{sys.executable} -m sherlock_project {args}"
+        cmd:list = [sys.executable, "-m", "sherlock_project"]
+        if args:
+            cmd += shlex.split(args)
 
         proc_out:str = ""
         try:
-            proc_out = subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT)
+            proc_out = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
             return proc_out.decode()
         except subprocess.CalledProcessError as e:
             raise InteractivesSubprocessError(e.output.decode())
