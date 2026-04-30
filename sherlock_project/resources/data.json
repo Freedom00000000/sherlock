@@ -1749,6 +1749,13 @@
     "urlMain": "https://odysee.com/",
     "username_claimed": "Odysee"
   },
+  "OkCupid": {
+    "errorMsg": "Sorry, this profile is either private or doesn't exist",
+    "errorType": "message",
+    "url": "https://www.okcupid.com/profile/{}",
+    "urlMain": "https://www.okcupid.com/",
+    "username_claimed": "blue"
+  },
   "Opensource": {
     "errorType": "status_code",
     "url": "https://opensource.com/users/{}",
