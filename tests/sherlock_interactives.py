@@ -7,10 +7,7 @@ import sys
 class Interactives:
     def run_cli(args:str = "") -> str:
         """Pass arguments to Sherlock as a normal user on the command line"""
-        if platform.system() == "Windows":
-            command:str = f"py -m sherlock_project {args}"
-        else:
-            command:str = f"{sys.executable} -m sherlock_project {args}"
+        command:str = f"{sys.executable} -m sherlock_project {args}"
 
         proc_out:str = ""
         try:
