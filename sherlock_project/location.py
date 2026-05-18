@@ -7,6 +7,7 @@ Inspired by:
   - Phone-number-location-tracker-using-python
     (github.com/problemsolvewithridoy/Phone-number-location-tracker-using-python)
   - apple_bssid_locator (github.com/darkosancanin/apple_bssid_locator)
+  - iPhone_Locator (github.com/thevickypedia/iPhone_Locator)
 """
 
 import json
@@ -511,3 +512,96 @@ def location_from_bssid(bssid: str, timeout: int = 10) -> LocationResult:
         pass
 
     return result
+
+
+# ---------------------------------------------------------------------------
+# iCloud / Find My iPhone location
+# Inspired by iPhone_Locator (github.com/thevickypedia/iPhone_Locator)
+# ---------------------------------------------------------------------------
+
+def location_from_icloud(
+    apple_id: str,
+    password: str,
+    device_name: Optional[str] = None,
+    timeout: int = 30,
+) -> tuple["LocationResult", str]:
+    """Retrieve an iPhone's location via iCloud Find My.
+
+    Uses pyicloud to authenticate with Apple ID and fetch the device's
+    current GPS coordinates, then reverse-geocodes them to a readable address
+    via geopy (Nominatim).
+
+    Args:
+        apple_id:    Apple ID email address.
+        password:    Apple ID password (or app-specific password if 2FA is on).
+        device_name: Case-insensitive substring to match against device names.
+                     If None, the first available device is used.
+        timeout:     Seconds to wait for iCloud response.
+
+    Returns:
+        Tuple of (LocationResult, device_name_str).
+        LocationResult has coordinates and raw_text (human-readable address).
+        Raises RuntimeError on authentication failure or missing pyicloud.
+    """
+    try:
+        from pyicloud import PyiCloudService
+    except ImportError:
+        raise RuntimeError("pyicloud is not installed. Run: pip install pyicloud")
+
+    result = LocationResult()
+
+    api = PyiCloudService(apple_id, password)
+
+    if api.requires_2fa:
+        raise RuntimeError(
+            "Two-factor authentication required. "
+            "Generate an app-specific password at appleid.apple.com."
+        )
+
+    devices = api.devices
+    if not devices:
+        raise RuntimeError("No devices found on this iCloud account.")
+
+    target = None
+    chosen_name = ""
+    for device in devices:
+        name = device.get("name", "")
+        if device_name is None or device_name.lower() in name.lower():
+            target = device
+            chosen_name = name
+            break
+
+    if target is None:
+        available = [d.get("name", "?") for d in devices]
+        raise RuntimeError(
+            f"Device '{device_name}' not found. "
+            f"Available: {', '.join(available)}"
+        )
+
+    loc = target.location()
+    if not loc:
+        raise RuntimeError(f"Could not retrieve location for '{chosen_name}'. Device may be offline.")
+
+    lat = loc.get("latitude")
+    lon = loc.get("longitude")
+    if lat is None or lon is None:
+        raise RuntimeError("Location data incomplete (no coordinates).")
+
+    result.coordinates = (float(lat), float(lon))
+
+    # Reverse geocode with geopy
+    try:
+        from geopy.geocoders import Nominatim
+        from geopy.exc import GeocoderTimedOut
+        geolocator = Nominatim(user_agent="sherlock-iphone-locator")
+        location_obj = geolocator.reverse(f"{lat}, {lon}", timeout=timeout)
+        if location_obj:
+            result.raw_text = location_obj.address
+            addr = location_obj.raw.get("address", {})
+            result.place_name = addr.get("city") or addr.get("town") or addr.get("village")
+            result.region = addr.get("state")
+            result.country = addr.get("country_code", "").upper() or None
+    except Exception:
+        pass
+
+    return result, chosen_name

@@ -745,6 +745,30 @@ def main():
         help="Look up the GPS location of a WiFi access point by MAC address (e.g. aa:bb:cc:dd:ee:ff) and exit.",
     )
 
+    parser.add_argument(
+        "--icloud",
+        metavar="APPLE_ID",
+        dest="icloud_apple_id",
+        default=None,
+        help="Locate an iPhone via iCloud Find My. Requires --icloud-password. E.g. --icloud user@icloud.com",
+    )
+
+    parser.add_argument(
+        "--icloud-password",
+        metavar="PASSWORD",
+        dest="icloud_password",
+        default=None,
+        help="Apple ID password (or app-specific password) for --icloud lookup.",
+    )
+
+    parser.add_argument(
+        "--icloud-device",
+        metavar="DEVICE_NAME",
+        dest="icloud_device",
+        default=None,
+        help="Device name to look up (partial match). Defaults to first device on account.",
+    )
+
     args = parser.parse_args()
 
     # Auto-detect phone numbers passed as positional username arguments
@@ -839,9 +863,45 @@ def main():
                   f" BSSID not found in Apple's database: {args.bssid}")
         sys.exit(0)
 
-    # Require at least one username when not in phone/bssid-lookup mode
+    # iCloud / Find My iPhone location lookup
+    if args.icloud_apple_id:
+        if not args.icloud_password:
+            parser.error("--icloud requires --icloud-password")
+        from sherlock_project.location import location_from_icloud
+        if args.no_color:
+            init(strip=True, convert=False)
+        else:
+            init(autoreset=True)
+        print(Style.BRIGHT + Fore.GREEN + "[" + Fore.YELLOW + "*" + Fore.GREEN + "]" +
+              Fore.WHITE + f" Connecting to iCloud as {args.icloud_apple_id} ...")
+        try:
+            loc, device_name = location_from_icloud(
+                args.icloud_apple_id,
+                args.icloud_password,
+                args.icloud_device,
+            )
+            if loc and loc.coordinates:
+                lat, lon = loc.coordinates
+                print(Style.BRIGHT + Fore.WHITE + "[" + Fore.GREEN + "+" + Fore.WHITE + "]" +
+                      Fore.GREEN + f" Device found: {device_name}")
+                print(Fore.CYAN + "    Coordinates : " + Style.RESET_ALL + f"{lat:.6f}, {lon:.6f}")
+                if loc.raw_text:
+                    print(Fore.CYAN + "    Address     : " + Style.RESET_ALL + loc.raw_text)
+                if loc.place_name:
+                    print(Fore.CYAN + "    City        : " + Style.RESET_ALL + loc.place_name)
+                if loc.region:
+                    print(Fore.CYAN + "    Region      : " + Style.RESET_ALL + loc.region)
+                if loc.country:
+                    print(Fore.CYAN + "    Country     : " + Style.RESET_ALL + loc.country)
+                print(Fore.CYAN + "    Maps        : " + Style.RESET_ALL +
+                      f"https://maps.google.com/?q={lat},{lon}")
+        except RuntimeError as e:
+            print(Style.BRIGHT + Fore.RED + f"[-] {e}" + Style.RESET_ALL)
+        sys.exit(0)
+
+    # Require at least one username when not in phone/bssid/icloud-lookup mode
     if not args.username:
-        parser.error("the following arguments are required: USERNAMES (or use --phone / --bssid)")
+        parser.error("the following arguments are required: USERNAMES (or use --phone / --bssid / --icloud)")
 
     # Check if both output methods are entered as input.
     if args.output is not None and args.folderoutput is not None:
