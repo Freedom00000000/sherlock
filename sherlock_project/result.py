@@ -33,7 +33,7 @@ class QueryResult():
     Describes result of query about a given username.
     """
     def __init__(self, username, site_name, site_url_user, status,
-                 query_time=None, context=None):
+                 query_time=None, context=None, location=None):
         """Create Query Result Object.
 
         Contains information about a specific method of detecting usernames on
@@ -68,6 +68,7 @@ class QueryResult():
         self.status        = status
         self.query_time    = query_time
         self.context       = context
+        self.location      = location
 
         return
 
