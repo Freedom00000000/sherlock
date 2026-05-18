@@ -739,6 +739,14 @@ def main():
 
     args = parser.parse_args()
 
+    # Auto-detect phone numbers passed as positional username arguments
+    if not args.phone_number and args.username:
+        for u in args.username:
+            if u.startswith("+") and u[1:].replace(" ", "").isdigit():
+                args.phone_number = u
+                args.username = [x for x in args.username if x != u]
+                break
+
     # If the user presses CTRL-C, exit gracefully without throwing errors
     signal.signal(signal.SIGINT, handler)
 
