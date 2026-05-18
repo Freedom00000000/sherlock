@@ -42,7 +42,7 @@ from sherlock_project.notify import QueryNotify
 from sherlock_project.notify import QueryNotifyPrint
 from sherlock_project.sites import SitesInformation
 from sherlock_project.location import extract_location, LocationResult
-from colorama import init
+from colorama import init, Fore, Style
 from argparse import ArgumentTypeError
 
 
@@ -666,7 +666,7 @@ def main():
     )
     parser.add_argument(
         "username",
-        nargs="+",
+        nargs="*",
         metavar="USERNAMES",
         action="store",
         help="One or more usernames to check with social networks. Check similar usernames using {?} (replace to '_', '-', '.').",
@@ -729,10 +729,42 @@ def main():
         help="Attempt to extract location data (coordinates, city, country) from found profile pages.",
     )
 
+    parser.add_argument(
+        "--phone",
+        metavar="PHONE_NUMBER",
+        dest="phone_number",
+        default=None,
+        help="Look up the geographic location of a phone number (e.g. +4512345678) and exit.",
+    )
+
     args = parser.parse_args()
 
     # If the user presses CTRL-C, exit gracefully without throwing errors
     signal.signal(signal.SIGINT, handler)
+
+    # Phone number location lookup (standalone mode — does not search usernames)
+    if args.phone_number:
+        from sherlock_project.location import location_from_phone
+        if args.no_color:
+            init(strip=True, convert=False)
+        else:
+            init(autoreset=True)
+        loc = location_from_phone(args.phone_number)
+        if loc:
+            print(Style.BRIGHT + Fore.GREEN + "[" + Fore.YELLOW + "+" + Fore.GREEN + "]" +
+                  Fore.WHITE + f" Phone: {args.phone_number}")
+            if loc.phone_location:
+                print(Fore.CYAN + f"    Location : " + Style.RESET_ALL + loc.phone_location)
+            if loc.country:
+                print(Fore.CYAN + f"    Country  : " + Style.RESET_ALL + loc.country)
+            if loc.phone_carrier:
+                print(Fore.CYAN + f"    Carrier  : " + Style.RESET_ALL + loc.phone_carrier)
+            if loc.phone_numbers:
+                print(Fore.CYAN + f"    E.164    : " + Style.RESET_ALL + loc.phone_numbers[0])
+        else:
+            print(Style.BRIGHT + Fore.RED + "[-]" + Style.RESET_ALL +
+                  f" Could not resolve location for: {args.phone_number}")
+        sys.exit(0)
 
     # Check for newer version of Sherlock. If it exists, let the user know about it
     try:
@@ -759,6 +791,10 @@ def main():
     else:
         # Enable color output.
         init(autoreset=True)
+
+    # Require at least one username when not in phone-lookup mode
+    if not args.username:
+        parser.error("the following arguments are required: USERNAMES (or use --phone PHONE_NUMBER)")
 
     # Check if both output methods are entered as input.
     if args.output is not None and args.folderoutput is not None:
