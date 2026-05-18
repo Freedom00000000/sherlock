@@ -114,7 +114,7 @@ class QueryNotifyPrint(QueryNotify):
     Query notify class that prints results.
     """
 
-    def __init__(self, result=None, verbose=False, print_all=False, browse=False):
+    def __init__(self, result=None, verbose=False, print_all=False, browse=False, detect_location=False):
         """Create Query Notify Print Object.
 
         Contains information about a specific method of notifying the results
@@ -136,6 +136,7 @@ class QueryNotifyPrint(QueryNotify):
         self.verbose = verbose
         self.print_all = print_all
         self.browse = browse
+        self.detect_location = detect_location
 
         return
 
@@ -209,6 +210,13 @@ class QueryNotifyPrint(QueryNotify):
                   f" {self.result.site_name}: " +
                   Style.RESET_ALL +
                   f"{self.result.site_url_user}")
+            if self.detect_location and hasattr(result, "location") and result.location:
+                print(Style.BRIGHT + Fore.WHITE + "    [" +
+                      Fore.CYAN + "L" +
+                      Fore.WHITE + "] " +
+                      Fore.CYAN + f"Location: " +
+                      Style.RESET_ALL +
+                      str(result.location))
             if self.browse:
                 webbrowser.open(self.result.site_url_user, 2)
 

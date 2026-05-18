@@ -41,6 +41,7 @@ from sherlock_project.result import QueryResult
 from sherlock_project.notify import QueryNotify
 from sherlock_project.notify import QueryNotifyPrint
 from sherlock_project.sites import SitesInformation
+from sherlock_project.location import extract_location, LocationResult
 from colorama import init
 from argparse import ArgumentTypeError
 
@@ -174,6 +175,7 @@ def sherlock(
     dump_response: bool = False,
     proxy: Optional[str] = None,
     timeout: int = 60,
+    detect_location: bool = False,
 ) -> dict[str, dict[str, str | QueryResult]]:
     """Run Sherlock Analysis.
 
@@ -189,6 +191,9 @@ def sherlock(
     proxy                  -- String indicating the proxy URL
     timeout                -- Time in seconds to wait before timing out request.
                               Default is 60 seconds.
+    detect_location        -- Boolean indicating whether to attempt to extract
+                              location data from found profile pages.
+                              Default is False.
 
     Return Value:
     Dictionary containing results from report. Key of dictionary is the name
@@ -202,6 +207,9 @@ def sherlock(
                        site.
         response_text: Text that came back from request.  May be None if
                        there was an HTTP error when checking for existence.
+        location:      LocationResult() object with extracted location data, or
+                       None.  Only populated when detect_location=True and the
+                       account was found (status == CLAIMED).
     """
 
     # Notify caller that we are starting the query.
@@ -478,6 +486,16 @@ def sherlock(
             print("VERDICT       : " + str(query_status))
             print("+++++++++++++++++++++")
 
+        # Optionally extract location data from claimed profiles
+        location: Optional[LocationResult] = None
+        if detect_location and query_status == QueryStatus.CLAIMED:
+            try:
+                html = response_text.decode(r.encoding or "utf-8", errors="replace") if isinstance(response_text, bytes) else (response_text or "")
+                loc = extract_location(html)
+                location = loc if loc else None
+            except Exception:
+                pass
+
         # Notify caller about results of query.
         result: QueryResult = QueryResult(
             username=username,
@@ -486,6 +504,7 @@ def sherlock(
             status=query_status,
             query_time=response_time,
             context=error_context,
+            location=location,
         )
         query_notify.update(result)
 
@@ -495,6 +514,7 @@ def sherlock(
         # Save results from request
         results_site["http_status"] = http_status
         results_site["response_text"] = response_text
+        results_site["location"] = location
 
         # Add this site's results into final dictionary with all of the other results.
         results_total[social_network] = results_site
@@ -701,6 +721,14 @@ def main():
         help="Ignore upstream exclusions (may return more false positives)",
     )
 
+    parser.add_argument(
+        "--detect-location",
+        action="store_true",
+        dest="detect_location",
+        default=False,
+        help="Attempt to extract location data (coordinates, city, country) from found profile pages.",
+    )
+
     args = parser.parse_args()
 
     # If the user presses CTRL-C, exit gracefully without throwing errors
@@ -809,7 +837,8 @@ def main():
 
     # Create notify object for query results.
     query_notify = QueryNotifyPrint(
-        result=None, verbose=args.verbose, print_all=args.print_all, browse=args.browse
+        result=None, verbose=args.verbose, print_all=args.print_all, browse=args.browse,
+        detect_location=args.detect_location,
     )
 
     # Run report on all specified users.
@@ -828,6 +857,7 @@ def main():
             dump_response=args.dump_response,
             proxy=args.proxy,
             timeout=args.timeout,
+            detect_location=args.detect_location,
         )
 
         if args.output:
