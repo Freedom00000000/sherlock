@@ -6,10 +6,13 @@ Inspired by:
   - apple-corelocation-experiments (github.com/acheong08/apple-corelocation-experiments)
   - Phone-number-location-tracker-using-python
     (github.com/problemsolvewithridoy/Phone-number-location-tracker-using-python)
+  - apple_bssid_locator (github.com/darkosancanin/apple_bssid_locator)
 """
 
 import json
 import re
+import struct
+import requests as _requests
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -331,5 +334,180 @@ def extract_location(html: str) -> LocationResult:
         result.phone_location = result.phone_location or ph.phone_location
         result.phone_carrier = result.phone_carrier or ph.phone_carrier
         result.country = result.country or ph.country
+
+    return result
+
+
+# ---------------------------------------------------------------------------
+# BSSID / WiFi access point location (Apple Location Services API)
+# Inspired by apple_bssid_locator (github.com/darkosancanin/apple_bssid_locator)
+# ---------------------------------------------------------------------------
+
+_APPLE_WLOC_URL = "https://gs-loc.apple.com/clls/wloc"
+_APPLE_USER_AGENT = "locationd/1753.17 CFNetwork/889.9 Darwin/17.2.0"
+_BSSID_RE = re.compile(r'^([0-9a-fA-F]{2}[:\-]){5}[0-9a-fA-F]{2}$')
+
+
+def _varint_encode(n: int) -> bytes:
+    out = bytearray()
+    while True:
+        b = n & 0x7F
+        n >>= 7
+        out.append(b | 0x80 if n else b)
+        if not n:
+            break
+    return bytes(out)
+
+
+def _varint_decode(data: bytes, pos: int) -> tuple[int, int]:
+    result, shift = 0, 0
+    while True:
+        b = data[pos]; pos += 1
+        result |= (b & 0x7F) << shift
+        shift += 7
+        if not (b & 0x80):
+            break
+    return result, pos
+
+
+def _pb_string(field: int, s: str) -> bytes:
+    enc = s.encode("utf-8")
+    return _varint_encode((field << 3) | 2) + _varint_encode(len(enc)) + enc
+
+
+def _pb_embedded(field: int, data: bytes) -> bytes:
+    return _varint_encode((field << 3) | 2) + _varint_encode(len(data)) + data
+
+
+def _pb_varint(field: int, value: int) -> bytes:
+    return _varint_encode((field << 3) | 0) + _varint_encode(value)
+
+
+def _build_wloc_request(bssid: str) -> bytes:
+    bssid = bssid.lower().replace("-", ":").replace(".", ":")
+    wifi_device = _pb_string(1, bssid)
+    apple_wloc = _pb_embedded(2, wifi_device) + _pb_varint(4, 1)
+
+    def hdr_str(s: str) -> bytes:
+        b = s.encode("utf-8")
+        return struct.pack(">H", len(b)) + b
+
+    return (
+        b"\x00\x01\x00\x05"
+        + hdr_str("en_US")
+        + hdr_str("com.apple.locationd")
+        + hdr_str("8.1.12B411")
+        + b"\x00\x00"
+        + struct.pack(">I", len(apple_wloc))
+        + apple_wloc
+    )
+
+
+def _parse_wloc_response(data: bytes) -> Optional[tuple[float, float]]:
+    if len(data) < 10:
+        return None
+    data = data[10:]
+
+    def skip_field(d: bytes, p: int, wt: int) -> int:
+        if wt == 0:
+            _, p = _varint_decode(d, p)
+        elif wt == 1:
+            p += 8
+        elif wt == 2:
+            ln, p = _varint_decode(d, p); p += ln
+        elif wt == 5:
+            p += 4
+        return p
+
+    def parse_location(d: bytes) -> Optional[tuple[float, float]]:
+        lat = lon = None
+        p = 0
+        while p < len(d):
+            tag, p = _varint_decode(d, p)
+            fn, wt = tag >> 3, tag & 7
+            if wt == 0:
+                val, p = _varint_decode(d, p)
+                if val >= (1 << 63):
+                    val -= (1 << 64)
+                if fn == 1:
+                    lat = val * 1e-8
+                elif fn == 2:
+                    lon = val * 1e-8
+            else:
+                p = skip_field(d, p, wt)
+        return (lat, lon) if lat is not None and lon is not None else None
+
+    def parse_wifi_device(d: bytes) -> Optional[tuple[float, float]]:
+        p = 0
+        while p < len(d):
+            tag, p = _varint_decode(d, p)
+            fn, wt = tag >> 3, tag & 7
+            if wt == 2:
+                ln, p = _varint_decode(d, p)
+                chunk = d[p:p + ln]; p += ln
+                if fn == 2:
+                    coords = parse_location(chunk)
+                    if coords:
+                        return coords
+            else:
+                p = skip_field(d, p, wt)
+        return None
+
+    pos = 0
+    while pos < len(data):
+        try:
+            tag, pos = _varint_decode(data, pos)
+        except Exception:
+            break
+        fn, wt = tag >> 3, tag & 7
+        if wt == 2:
+            ln, pos = _varint_decode(data, pos)
+            chunk = data[pos:pos + ln]; pos += ln
+            if fn == 2:
+                coords = parse_wifi_device(chunk)
+                if coords:
+                    lat, lon = coords
+                    if lat != -180.0 and lon != -180.0:
+                        return (lat, lon)
+        else:
+            pos = skip_field(data, pos, wt)
+    return None
+
+
+def location_from_bssid(bssid: str, timeout: int = 10) -> LocationResult:
+    """Look up the GPS location of a WiFi access point by its BSSID (MAC address).
+
+    Queries Apple's Location Services API — the same infrastructure iOS uses
+    for WiFi-based positioning.
+
+    Args:
+        bssid: MAC address of the access point, e.g. "aa:bb:cc:dd:ee:ff"
+        timeout: HTTP request timeout in seconds.
+
+    Returns:
+        LocationResult with coordinates if the AP is in Apple's database.
+    """
+    result = LocationResult()
+
+    if not _BSSID_RE.match(bssid.strip()):
+        return result
+
+    try:
+        payload = _build_wloc_request(bssid)
+        resp = _requests.post(
+            _APPLE_WLOC_URL,
+            data=payload,
+            headers={
+                "Content-Type": "application/x-www-form-urlencoded",
+                "User-Agent": _APPLE_USER_AGENT,
+            },
+            timeout=timeout,
+        )
+        if resp.status_code == 200:
+            coords = _parse_wloc_response(resp.content)
+            if coords:
+                result.coordinates = coords
+    except Exception:
+        pass
 
     return result

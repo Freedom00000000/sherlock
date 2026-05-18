@@ -737,6 +737,14 @@ def main():
         help="Look up the geographic location of a phone number (e.g. +4512345678) and exit.",
     )
 
+    parser.add_argument(
+        "--bssid",
+        metavar="BSSID",
+        dest="bssid",
+        default=None,
+        help="Look up the GPS location of a WiFi access point by MAC address (e.g. aa:bb:cc:dd:ee:ff) and exit.",
+    )
+
     args = parser.parse_args()
 
     # Auto-detect phone numbers passed as positional username arguments
@@ -744,6 +752,15 @@ def main():
         for u in args.username:
             if u.startswith("+") and u[1:].replace(" ", "").isdigit():
                 args.phone_number = u
+                args.username = [x for x in args.username if x != u]
+                break
+
+    # Auto-detect MAC/BSSID addresses passed as positional username arguments
+    _mac_re = re.compile(r'^([0-9a-fA-F]{2}[:\-]){5}[0-9a-fA-F]{2}$')
+    if not args.bssid and args.username:
+        for u in args.username:
+            if _mac_re.match(u):
+                args.bssid = u
                 args.username = [x for x in args.username if x != u]
                 break
 
@@ -800,9 +817,31 @@ def main():
         # Enable color output.
         init(autoreset=True)
 
-    # Require at least one username when not in phone-lookup mode
+    # BSSID / WiFi access point location lookup
+    if args.bssid:
+        from sherlock_project.location import location_from_bssid
+        if args.no_color:
+            init(strip=True, convert=False)
+        else:
+            init(autoreset=True)
+        print(Style.BRIGHT + Fore.GREEN + "[" + Fore.YELLOW + "*" + Fore.GREEN + "]" +
+              Fore.WHITE + f" Looking up BSSID: {args.bssid} ...")
+        loc = location_from_bssid(args.bssid)
+        if loc and loc.coordinates:
+            lat, lon = loc.coordinates
+            print(Style.BRIGHT + Fore.WHITE + "[" + Fore.GREEN + "+" + Fore.WHITE + "]" +
+                  Fore.GREEN + " BSSID found in Apple Location Services")
+            print(Fore.CYAN + "    Coordinates : " + Style.RESET_ALL + f"{lat:.6f}, {lon:.6f}")
+            print(Fore.CYAN + "    Maps        : " + Style.RESET_ALL +
+                  f"https://maps.google.com/?q={lat},{lon}")
+        else:
+            print(Style.BRIGHT + Fore.RED + "[-]" + Style.RESET_ALL +
+                  f" BSSID not found in Apple's database: {args.bssid}")
+        sys.exit(0)
+
+    # Require at least one username when not in phone/bssid-lookup mode
     if not args.username:
-        parser.error("the following arguments are required: USERNAMES (or use --phone PHONE_NUMBER)")
+        parser.error("the following arguments are required: USERNAMES (or use --phone / --bssid)")
 
     # Check if both output methods are entered as input.
     if args.output is not None and args.folderoutput is not None:
