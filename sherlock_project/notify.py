@@ -214,7 +214,7 @@ class QueryNotifyPrint(QueryNotify):
                 print(Style.BRIGHT + Fore.WHITE + "    [" +
                       Fore.CYAN + "L" +
                       Fore.WHITE + "] " +
-                      Fore.CYAN + f"Location: " +
+                      Fore.CYAN + "Location: " +
                       Style.RESET_ALL +
                       str(result.location))
             if self.browse:
