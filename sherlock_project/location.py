@@ -7,7 +7,7 @@ apple-corelocation-experiments (github.com/acheong08/apple-corelocation-experime
 
 import json
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Optional
 
 
