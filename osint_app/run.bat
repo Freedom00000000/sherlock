@@ -1,0 +1,6 @@
+@echo off
+echo Installing dependencies...
+pip install flask sherlock-project
+echo Starting Sherlock OSINT Dashboard...
+python app.py
+pause
