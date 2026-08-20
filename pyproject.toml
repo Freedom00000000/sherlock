@@ -66,3 +66,12 @@ defusedxml = "^0.7.1"
 
 [tool.poetry.scripts]
 sherlock = 'sherlock_project.sherlock:main'
+
+[tool.ruff]
+exclude = [
+    "windows-app",
+    "mobile-app",
+    "osint_app",
+    "android-app",
+    "devel",
+]
