@@ -68,6 +68,7 @@ defusedxml = "^0.7.1"
 sherlock = 'sherlock_project.sherlock:main'
 
 [tool.ruff]
+line-length = 320
 exclude = [
     "windows-app",
     "mobile-app",
@@ -75,3 +76,7 @@ exclude = [
     "android-app",
     "devel",
 ]
+
+[tool.ruff.lint]
+select = ["E", "F"]
+ignore = ["E501"]
