@@ -1,9 +1,12 @@
 package com.sherlock.android
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import androidx.activity.viewModels
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.sherlock.android.adapter.ResultsAdapter
@@ -40,6 +43,7 @@ class MainActivity : AppCompatActivity() {
                 startSearch(); true
             } else false
         }
+        binding.btnSpiderFoot.setOnClickListener { runSpiderFoot() }
     }
 
     private fun setupSwitches() {
@@ -83,6 +87,48 @@ class MainActivity : AppCompatActivity() {
         viewModel.foundCount.observe(this) { count ->
             binding.tvFoundCount.text = getString(R.string.found_count, count)
         }
+
+        viewModel.osintRunning.observe(this) { running ->
+            binding.btnSpiderFoot.isEnabled = !running
+            binding.btnSpiderFoot.text = if (running)
+                "SpiderFoot scanning…"
+            else
+                getString(R.string.btn_spiderfoot)
+        }
+
+        viewModel.osintResults.observe(this) { results ->
+            val sb = StringBuilder()
+            for (r in results) {
+                val status = if (r.found) "✓ FOUND" else "✗ NOT FOUND"
+                sb.appendLine("${r.platform}  —  $status")
+                for (d in r.details) sb.appendLine("   $d")
+                if (r.found && r.url != null) sb.appendLine("   ${r.url}")
+                sb.appendLine()
+            }
+            AlertDialog.Builder(this)
+                .setTitle(getString(R.string.osint_title))
+                .setMessage(sb.toString().trimEnd())
+                .setPositiveButton("Close", null)
+                .setNeutralButton("Open GitHub") { _, _ ->
+                    val username = binding.etUsername.text.toString().trim()
+                    if (username.isNotEmpty()) {
+                        startActivity(Intent(Intent.ACTION_VIEW,
+                            Uri.parse("https://github.com/$username")))
+                    }
+                }
+                .show()
+        }
+    }
+
+    private fun runSpiderFoot() {
+        val username = binding.etUsername.text.toString().trim()
+        if (username.isEmpty()) {
+            binding.tilUsername.error = getString(R.string.error_empty_username)
+            return
+        }
+        binding.tilUsername.error = null
+        hideKeyboard()
+        viewModel.runSpiderFoot(username)
     }
 
     private fun hideKeyboard() {

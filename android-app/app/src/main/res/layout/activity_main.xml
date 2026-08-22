@@ -100,6 +100,17 @@
 
         </LinearLayout>
 
+        <!-- SpiderFoot OSINT button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSpiderFoot"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="@string/btn_spiderfoot"
+            android:textAllCaps="false"
+            app:icon="@android:drawable/ic_menu_zoom" />
+
         <!-- Progress -->
         <LinearLayout
             android:layout_width="match_parent"

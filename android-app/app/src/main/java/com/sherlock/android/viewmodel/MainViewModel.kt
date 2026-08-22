@@ -6,9 +6,11 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.sherlock.android.model.CheckResult
+import com.sherlock.android.model.OsintResult
 import com.sherlock.android.model.ResultStatus
 import com.sherlock.android.service.DataLoader
 import com.sherlock.android.service.SiteChecker
+import com.sherlock.android.service.SpiderFootChecker
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
@@ -32,6 +34,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val dataLoader = DataLoader(application)
     private val checker = SiteChecker()
+    private val spiderFootChecker = SpiderFootChecker()
 
     private val _result = MutableLiveData<CheckResult>()
     val result: LiveData<CheckResult> = _result
@@ -44,6 +47,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _foundCount = MutableLiveData(0)
     val foundCount: LiveData<Int> = _foundCount
+
+    private val _osintResults = MutableLiveData<List<OsintResult>>()
+    val osintResults: LiveData<List<OsintResult>> = _osintResults
+
+    private val _osintRunning = MutableLiveData(false)
+    val osintRunning: LiveData<Boolean> = _osintRunning
 
     private var searchJob: Job? = null
 
@@ -90,5 +99,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun stop() {
         searchJob?.cancel()
         _isRunning.value = false
+    }
+
+    fun runSpiderFoot(username: String) {
+        if (_osintRunning.value == true) return
+        _osintRunning.value = true
+        viewModelScope.launch {
+            try {
+                val results = kotlinx.coroutines.withContext(Dispatchers.IO) {
+                    spiderFootChecker.checkAll(username)
+                }
+                _osintResults.value = results
+            } finally {
+                _osintRunning.value = false
+            }
+        }
     }
 }
