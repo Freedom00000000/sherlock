@@ -1,6 +1,8 @@
 import os
-from sherlock_interactives import Interactives
+
 import sherlock_project
+
+from sherlock_interactives import Interactives
 
 def test_versioning() -> None:
     # Ensure __version__ matches version presented to the user
