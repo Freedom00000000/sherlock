@@ -25,13 +25,21 @@ class DataLoader(private val context: Context) {
             val urlMain = obj.get("urlMain")?.asString ?: continue
             val errorType = obj.get("errorType")?.asString ?: continue
 
+            val errorMsgs: List<String> = when {
+                obj.get("errorMsg")?.isJsonArray == true ->
+                    obj.getAsJsonArray("errorMsg").map { it.asString }
+                obj.get("errorMsg")?.isJsonPrimitive == true ->
+                    listOf(obj.get("errorMsg").asString)
+                else -> emptyList()
+            }
+
             sites.add(
                 SiteInfo(
                     name = name,
                     url = url,
                     urlMain = urlMain,
                     errorType = errorType,
-                    errorMsg = obj.get("errorMsg")?.asString,
+                    errorMsgs = errorMsgs,
                     regexCheck = obj.get("regexCheck")?.asString,
                     requestHead = obj.get("request_head_only")?.asBoolean ?: false,
                     isDanishDating = name in DANISH_DATING_SITES

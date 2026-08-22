@@ -11,9 +11,11 @@ import com.sherlock.android.service.DataLoader
 import com.sherlock.android.service.SiteChecker
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 
 private val CHEATER_SITES = setOf(
     "DanishDatingNet", "DenmarkPassions", "Nydate", "datingRU",
@@ -23,6 +25,8 @@ private val CHEATER_SITES = setOf(
     "Instagram", "Snapchat", "TikTok", "Twitter", "Telegram",
     "Reddit", "Discord", "Kik", "Flickr"
 )
+
+private const val MAX_CONCURRENT = 15
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -50,25 +54,36 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _foundCount.value = 0
 
         searchJob = viewModelScope.launch {
-            val allSites = withContext(Dispatchers.IO) { dataLoader.loadSites() }
-            val sites = if (cheaterMode) allSites.filter { it.name in CHEATER_SITES } else allSites
-            val total = sites.size
-            var found = 0
+            try {
+                val allSites = kotlinx.coroutines.withContext(Dispatchers.IO) {
+                    dataLoader.loadSites()
+                }
+                val sites = if (cheaterMode) allSites.filter { it.name in CHEATER_SITES } else allSites
+                val total = sites.size
+                val semaphore = Semaphore(MAX_CONCURRENT)
+                var found = 0
+                var done = 0
 
-            sites.forEachIndexed { index, site ->
-                if (!isActive) return@launch
-                val checkResult = withContext(Dispatchers.IO) {
-                    checker.check(site, username)
+                val deferreds = sites.map { site ->
+                    async(Dispatchers.IO) {
+                        semaphore.withPermit { checker.check(site, username) }
+                    }
                 }
-                _result.value = checkResult
-                if (checkResult.status == ResultStatus.FOUND) {
-                    found++
-                    _foundCount.value = found
+
+                for (deferred in deferreds) {
+                    if (!isActive) break
+                    val checkResult = deferred.await()
+                    _result.value = checkResult
+                    done++
+                    if (checkResult.status == ResultStatus.FOUND) {
+                        found++
+                        _foundCount.value = found
+                    }
+                    _progress.value = Pair(done, total)
                 }
-                _progress.value = Pair(index + 1, total)
+            } finally {
+                _isRunning.value = false
             }
-
-            _isRunning.value = false
         }
     }
 

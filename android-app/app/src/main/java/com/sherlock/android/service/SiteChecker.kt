@@ -51,44 +51,46 @@ class SiteChecker {
 
     private fun checkStatusCode(site: SiteInfo, url: String): CheckResult {
         val request = Request.Builder().url(url).get().build()
-        val response = client.newCall(request).execute()
-        val code = response.code
-        response.close()
-        val found = code in 200..299
-        return CheckResult(
-            siteName = site.name,
-            url = url,
-            status = if (found) ResultStatus.FOUND else ResultStatus.NOT_FOUND,
-            isDanishDating = site.isDanishDating
-        )
+        client.newCall(request).execute().use { response ->
+            val found = response.isSuccessful
+            return CheckResult(
+                siteName = site.name,
+                url = url,
+                status = if (found) ResultStatus.FOUND else ResultStatus.NOT_FOUND,
+                isDanishDating = site.isDanishDating
+            )
+        }
     }
 
     private fun checkMessage(site: SiteInfo, url: String): CheckResult {
-        val errorMsg = site.errorMsg ?: return CheckResult(site.name, url, ResultStatus.ERROR, "No errorMsg defined", site.isDanishDating)
+        if (site.errorMsgs.isEmpty()) {
+            return CheckResult(site.name, url, ResultStatus.ERROR, "No errorMsg defined", site.isDanishDating)
+        }
         val request = Request.Builder().url(url).get().build()
-        val response = clientFollowRedirects.newCall(request).execute()
-        val body = response.body?.string() ?: ""
-        response.close()
-        val notFound = body.contains(errorMsg)
-        return CheckResult(
-            siteName = site.name,
-            url = url,
-            status = if (notFound) ResultStatus.NOT_FOUND else ResultStatus.FOUND,
-            isDanishDating = site.isDanishDating
-        )
+        clientFollowRedirects.newCall(request).execute().use { response ->
+            val body = response.body?.string() ?: ""
+            val notFound = site.errorMsgs.any { msg -> body.contains(msg) }
+            return CheckResult(
+                siteName = site.name,
+                url = url,
+                status = if (notFound) ResultStatus.NOT_FOUND else ResultStatus.FOUND,
+                isDanishDating = site.isDanishDating
+            )
+        }
     }
 
+    // response_url sites return HTTP 200 for existing users but redirect (3xx)
+    // to an error/login page when the user doesn't exist.
     private fun checkResponseUrl(site: SiteInfo, url: String): CheckResult {
         val request = Request.Builder().url(url).get().build()
-        val response = clientFollowRedirects.newCall(request).execute()
-        val finalUrl = response.request.url.toString()
-        response.close()
-        val found = finalUrl.contains(url.substringAfterLast("/").take(10))
-        return CheckResult(
-            siteName = site.name,
-            url = url,
-            status = if (found) ResultStatus.FOUND else ResultStatus.NOT_FOUND,
-            isDanishDating = site.isDanishDating
-        )
+        client.newCall(request).execute().use { response ->
+            val found = response.isSuccessful
+            return CheckResult(
+                siteName = site.name,
+                url = url,
+                status = if (found) ResultStatus.FOUND else ResultStatus.NOT_FOUND,
+                isDanishDating = site.isDanishDating
+            )
+        }
     }
 }
