@@ -22,7 +22,8 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         setupRecyclerView()
-        setupSearchButton()
+        setupButtons()
+        setupSwitches()
         observeViewModel()
     }
 
@@ -31,13 +32,19 @@ class MainActivity : AppCompatActivity() {
         binding.rvResults.adapter = adapter
     }
 
-    private fun setupSearchButton() {
+    private fun setupButtons() {
         binding.btnSearch.setOnClickListener { startSearch() }
+        binding.btnStop.setOnClickListener { viewModel.stop() }
         binding.etUsername.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_SEARCH) {
-                startSearch()
-                true
+                startSearch(); true
             } else false
+        }
+    }
+
+    private fun setupSwitches() {
+        binding.switchFoundOnly.setOnCheckedChangeListener { _, checked ->
+            adapter.setFoundOnly(checked)
         }
     }
 
@@ -51,7 +58,8 @@ class MainActivity : AppCompatActivity() {
         hideKeyboard()
         adapter.clear()
         binding.tvFoundCount.text = getString(R.string.found_count, 0)
-        viewModel.search(username)
+        val cheaterMode = binding.chipModeCheater.isChecked
+        viewModel.search(username, cheaterMode)
     }
 
     private fun observeViewModel() {
@@ -67,6 +75,7 @@ class MainActivity : AppCompatActivity() {
 
         viewModel.isRunning.observe(this) { running ->
             binding.btnSearch.isEnabled = !running
+            binding.btnStop.isEnabled = running
             binding.progressBar.visibility = if (running) android.view.View.VISIBLE else android.view.View.GONE
             binding.tvProgress.visibility = if (running) android.view.View.VISIBLE else android.view.View.GONE
         }
