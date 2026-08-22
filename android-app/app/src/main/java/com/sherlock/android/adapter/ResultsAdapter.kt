@@ -23,7 +23,7 @@ class ResultsAdapter : RecyclerView.Adapter<ResultsAdapter.ResultViewHolder>() {
         all.add(0, result)
         if (!foundOnly || result.status == ResultStatus.FOUND) {
             visible.add(0, result)
-            notifyItemInserted(0)
+            notifyDataSetChanged()
         }
     }
 
