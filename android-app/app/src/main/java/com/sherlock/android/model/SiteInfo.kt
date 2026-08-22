@@ -5,7 +5,7 @@ data class SiteInfo(
     val url: String,
     val urlMain: String,
     val errorType: String,
-    val errorMsg: String? = null,
+    val errorMsgs: List<String> = emptyList(),
     val regexCheck: String? = null,
     val requestHead: Boolean = false,
     val isDanishDating: Boolean = false
