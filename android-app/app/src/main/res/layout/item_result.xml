@@ -38,7 +38,7 @@
                 android:textSize="10sp"
                 app:chipBackgroundColor="#FF5252"
                 app:chipMinHeight="24dp"
-                app:setEnsureMinTouchTargetSize="false" />
+                app:ensureMinTouchTargetSize="false" />
 
             <com.google.android.material.chip.Chip
                 android:id="@+id/chipStatus"
@@ -48,7 +48,7 @@
                 android:textColor="@android:color/white"
                 android:textSize="11sp"
                 app:chipMinHeight="24dp"
-                app:setEnsureMinTouchTargetSize="false" />
+                app:ensureMinTouchTargetSize="false" />
 
         </LinearLayout>
 
