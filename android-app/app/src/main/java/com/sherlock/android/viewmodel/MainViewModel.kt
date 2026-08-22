@@ -10,8 +10,19 @@ import com.sherlock.android.model.ResultStatus
 import com.sherlock.android.service.DataLoader
 import com.sherlock.android.service.SiteChecker
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+private val CHEATER_SITES = setOf(
+    "DanishDatingNet", "DenmarkPassions", "Nydate", "datingRU",
+    "APClips", "AdmireMe.Vip", "BongaCams", "ChaturBate", "Erome",
+    "Image Fap", "LushStories", "Motherless", "PocketStars", "Pornhub",
+    "RedTube", "RocketTube", "TnAFlix", "Xvideos", "YouPorn", "xHamster",
+    "Instagram", "Snapchat", "TikTok", "Twitter", "Telegram",
+    "Reddit", "Discord", "Kik", "Flickr"
+)
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -30,18 +41,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _foundCount = MutableLiveData(0)
     val foundCount: LiveData<Int> = _foundCount
 
-    fun search(username: String) {
+    private var searchJob: Job? = null
+
+    fun search(username: String, cheaterMode: Boolean = false) {
         if (_isRunning.value == true) return
 
         _isRunning.value = true
         _foundCount.value = 0
 
-        viewModelScope.launch {
-            val sites = withContext(Dispatchers.IO) { dataLoader.loadSites() }
+        searchJob = viewModelScope.launch {
+            val allSites = withContext(Dispatchers.IO) { dataLoader.loadSites() }
+            val sites = if (cheaterMode) allSites.filter { it.name in CHEATER_SITES } else allSites
             val total = sites.size
             var found = 0
 
             sites.forEachIndexed { index, site ->
+                if (!isActive) return@launch
                 val checkResult = withContext(Dispatchers.IO) {
                     checker.check(site, username)
                 }
@@ -58,6 +73,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun stop() {
+        searchJob?.cancel()
         _isRunning.value = false
     }
 }

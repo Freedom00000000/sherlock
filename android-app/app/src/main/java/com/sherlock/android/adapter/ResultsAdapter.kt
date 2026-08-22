@@ -15,15 +15,28 @@ import com.sherlock.android.model.ResultStatus
 
 class ResultsAdapter : RecyclerView.Adapter<ResultsAdapter.ResultViewHolder>() {
 
-    private val results = mutableListOf<CheckResult>()
+    private val all = mutableListOf<CheckResult>()
+    private val visible = mutableListOf<CheckResult>()
+    private var foundOnly = false
 
     fun addResult(result: CheckResult) {
-        results.add(0, result)
-        notifyItemInserted(0)
+        all.add(0, result)
+        if (!foundOnly || result.status == ResultStatus.FOUND) {
+            visible.add(0, result)
+            notifyItemInserted(0)
+        }
+    }
+
+    fun setFoundOnly(enabled: Boolean) {
+        foundOnly = enabled
+        visible.clear()
+        visible.addAll(if (enabled) all.filter { it.status == ResultStatus.FOUND } else all)
+        notifyDataSetChanged()
     }
 
     fun clear() {
-        results.clear()
+        all.clear()
+        visible.clear()
         notifyDataSetChanged()
     }
 
@@ -34,10 +47,10 @@ class ResultsAdapter : RecyclerView.Adapter<ResultsAdapter.ResultViewHolder>() {
     }
 
     override fun onBindViewHolder(holder: ResultViewHolder, position: Int) {
-        holder.bind(results[position])
+        holder.bind(visible[position])
     }
 
-    override fun getItemCount() = results.size
+    override fun getItemCount() = visible.size
 
     class ResultViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val card: CardView = itemView.findViewById(R.id.cardResult)
@@ -55,29 +68,26 @@ class ResultsAdapter : RecyclerView.Adapter<ResultsAdapter.ResultViewHolder>() {
                     chipStatus.text = "FOUND"
                     chipStatus.setChipBackgroundColorResource(com.google.android.material.R.color.design_default_color_secondary)
                     card.setCardBackgroundColor(itemView.context.getColor(R.color.found_background))
+                    card.setOnClickListener {
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(result.url))
+                        itemView.context.startActivity(intent)
+                    }
                 }
                 ResultStatus.NOT_FOUND -> {
                     chipStatus.text = "NOT FOUND"
                     chipStatus.setChipBackgroundColorResource(com.google.android.material.R.color.material_on_surface_disabled)
                     card.setCardBackgroundColor(itemView.context.getColor(android.R.color.white))
+                    card.setOnClickListener(null)
                 }
                 ResultStatus.ERROR -> {
                     chipStatus.text = "ERROR"
                     chipStatus.setChipBackgroundColorResource(com.google.android.material.R.color.design_default_color_error)
                     card.setCardBackgroundColor(itemView.context.getColor(android.R.color.white))
+                    card.setOnClickListener(null)
                 }
             }
 
             chipDanish.visibility = if (result.isDanishDating) View.VISIBLE else View.GONE
-
-            if (result.status == ResultStatus.FOUND) {
-                card.setOnClickListener {
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(result.url))
-                    itemView.context.startActivity(intent)
-                }
-            } else {
-                card.setOnClickListener(null)
-            }
         }
     }
 }

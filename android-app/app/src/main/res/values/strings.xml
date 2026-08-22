@@ -1,8 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Sherlock - Username Finder</string>
+    <string name="app_name">Sherlock OSINT</string>
     <string name="hint_username">Enter username to search</string>
-    <string name="btn_search">Search Across All Sites</string>
+    <string name="btn_search">Search</string>
+    <string name="btn_stop">Stop</string>
+    <string name="mode_all">All sites (476+)</string>
+    <string name="mode_cheater">Cheater Detector</string>
+    <string name="found_only">Found only</string>
     <string name="error_empty_username">Please enter a username</string>
     <string name="progress_format">%1$d / %2$d</string>
     <string name="found_count">Found: %1$d</string>

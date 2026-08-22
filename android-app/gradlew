@@ -1,6 +1,8 @@
 #!/bin/sh
 # Gradle wrapper script for Unix
-GRADLE_OPTS="${GRADLE_OPTS:-"-Xdock:name=$APP_NAME" "-Xdock:icon=$APP_HOME/media/gradle.icns"}"
+case "$(uname)" in
+    Darwin*) GRADLE_OPTS="${GRADLE_OPTS:-"-Xdock:name=$APP_NAME" "-Xdock:icon=$APP_HOME/media/gradle.icns"}" ;;
+esac
 APP_NAME="Gradle"
 APP_BASE_NAME=$(basename "$0")
 APP_HOME=$(cd "$(dirname "$0")" && pwd -P)
