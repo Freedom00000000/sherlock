@@ -46,9 +46,20 @@ jobs:
       - name: Build debug APK
         run: cd android-app && ./gradlew assembleDebug --no-daemon
 
-      - name: Upload APK
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: sherlock-android-debug
           path: android-app/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
+
+      - name: Publish GitHub Release (master only)
+        if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-latest
+          name: Sherlock Android (latest)
+          body: Latest debug APK built from master. Install with "Allow unknown sources" enabled.
+          prerelease: true
+          files: android-app/app/build/outputs/apk/debug/app-debug.apk
+          fail_on_unmatched_files: true
