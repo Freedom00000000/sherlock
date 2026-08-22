@@ -20,10 +20,10 @@ class ResultsAdapter : RecyclerView.Adapter<ResultsAdapter.ResultViewHolder>() {
     private var foundOnly = false
 
     fun addResult(result: CheckResult) {
-        all.add(0, result)
+        all.add(result)
         if (!foundOnly || result.status == ResultStatus.FOUND) {
-            visible.add(0, result)
-            notifyItemInserted(0)
+            visible.add(result)
+            notifyItemInserted(visible.size - 1)
         }
     }
 
