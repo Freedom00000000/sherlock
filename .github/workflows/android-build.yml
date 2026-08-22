@@ -34,6 +34,12 @@ jobs:
           key: gradle-${{ hashFiles('android-app/**/*.gradle*', 'android-app/gradle/wrapper/gradle-wrapper.properties') }}
           restore-keys: gradle-
 
+      - name: Download Gradle wrapper JAR
+        run: |
+          mkdir -p android-app/gradle/wrapper
+          curl -fsSL -o android-app/gradle/wrapper/gradle-wrapper.jar \
+            https://raw.githubusercontent.com/gradle/gradle/v8.2.0/gradle/wrapper/gradle-wrapper.jar
+
       - name: Make gradlew executable
         run: chmod +x android-app/gradlew
 
